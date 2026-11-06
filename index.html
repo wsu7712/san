@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>제주 목적별 입도객 vs 한라산 방문객 비교 분석 보고서</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    margin: 0; padding: 24px; background: #f5f6f8; color: #1f2430;
+    line-height: 1.55;
+  }
+  .container { max-width: 1080px; margin: 0 auto; }
+  .cover {
+    background: linear-gradient(135deg,#2563eb,#1e40af);
+    color: #fff; border-radius: 16px; padding: 32px; margin-bottom: 24px;
+  }
+  .cover h1 { margin: 0 0 8px; font-size: 26px; }
+  .cover p { margin: 4px 0; opacity: .92; font-size: 14px; }
+  .chips { margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip { background: rgba(255,255,255,.18); padding: 4px 12px; border-radius: 999px; font-size: 12px; }
+
+  .card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 14px;
+    padding: 22px; margin-bottom: 18px;
+  }
+  .section-title { display:flex; align-items:center; gap:10px; margin-bottom: 14px; }
+  .badge {
+    background:#2563eb; color:#fff; width:26px; height:26px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex-shrink:0;
+  }
+  .section-title h2 { margin:0; font-size: 18px; }
+  h3 { font-size: 15px; margin: 18px 0 8px; }
+  .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+
+  .subcard {
+    border:1px solid #e5e7eb; border-radius: 12px; padding: 16px; background:#fafbfc;
+  }
+  .subcard h4 { margin:0 0 4px; font-size:14px; }
+  .subcard p.desc { font-size: 12.5px; color:#6b7280; margin: 2px 0 12px; }
+
+  .codebox {
+    background:#111827; color:#93c5fd; font-family: Consolas, monospace;
+    font-size: 12.5px; padding: 10px 12px; border-radius: 8px; margin-bottom: 8px;
+    overflow-x:auto; white-space: nowrap;
+  }
+  input[type=month], input[type=text], select {
+    width:100%; padding:9px 10px; border:1px solid #d1d5db; border-radius:8px; font-size:14px; margin-bottom:10px;
+  }
+  .btnrow { display:flex; gap:8px; margin-bottom: 10px; }
+  button {
+    cursor:pointer; border-radius:8px; padding:9px 16px; font-size:13.5px; font-weight:600; border:1px solid transparent;
+  }
+  .btn-primary { background:#2563eb; color:#fff; }
+  .btn-outline { background:#fff; color:#2563eb; border-color:#2563eb; }
+  .status {
+    font-size:13px; padding:10px 12px; border-radius:8px; background:#f3f4f6; color:#4b5563;
+  }
+  .status.ok { background:#ecfdf5; color:#047857; }
+  .status.err { background:#fef2f2; color:#b91c1c; }
+  .status.warn { background:#fffbeb; color:#92400e; }
+
+  .upload-box { border:1px dashed #cbd5e1; border-radius:10px; padding:14px; background:#f8fafc; }
+  input[type=file] { font-size: 13px; }
+
+  table { border-collapse: collapse; width:100%; font-size: 13px; margin-top: 10px; }
+  th, td { border:1px solid #e5e7eb; padding:6px 8px; text-align:center; }
+  th { background:#f3f4f6; }
+  .table-wrap { max-height: 320px; overflow:auto; border-radius:8px; }
+
+  .chart-placeholder, .chart-area {
+    border:1px dashed #cbd5e1; border-radius:10px; min-height: 260px;
+    display:flex; align-items:center; justify-content:center; color:#9ca3af; font-size:13px;
+    background:#fafbfc; margin: 10px 0;
+  }
+  blockquote {
+    border-left:4px solid #f59e0b; background:#fffbeb; margin:0; padding:10px 14px; border-radius:6px; font-size:13.5px;
+  }
+  textarea { width:100%; min-height:90px; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-size:13.5px; }
+  .warn-banner {
+    background:#fef2f2; border:1px solid #fecaca; color:#991b1b; padding:12px 16px;
+    border-radius:10px; margin-bottom: 18px; font-size:13.5px;
+  }
+  .small { font-size:12px; color:#6b7280; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ========================= 설정 ========================= -->
+  <script>
+    // ⚠️ 여기에 Google Apps Script 웹 앱 배포 주소를 넣으세요.
+    // 예: var RELAY_URL = "https://script.google.com/macros/s/AKfycb.../exec";
+    var RELAY_URL = "";
+  </script>
+  <div id="relayWarnBanner"></div>
+
+  <!-- ========================= 커버 ========================= -->
+  <div class="cover">
+    <h1>제주 목적별 입도객 vs 한라산 방문객 비교 분석 보고서</h1>
+    <p>공공데이터(목적별 입도객 · 내/외국인 관광객 현황)와 한라산 방문객 데이터를 결합해 분석합니다.</p>
+    <div class="chips">
+      <span class="chip">작성일: ____ </span>
+      <span class="chip">분석기간: ____ </span>
+      <span class="chip">인증키 비노출 (Apps Script 중계)</span>
+    </div>
+  </div>
+
+  <!-- ========================= 1. 개요 ========================= -->
+  <div class="card">
+    <div class="section-title"><div class="badge">1</div><h2>개요</h2></div>
+    <h3>1.1 분석 목적</h3>
+    <p>제주 전체 입도객(목적별)과 한라산국립공원 방문객 간의 관계를 정량적으로 파악하고, 전체 관광 수요와 자연관광 수요 간 동조·괴리 구간을 식별합니다.</p>
+    <h3>1.2 분석 범위 및 제약</h3>
+    <blockquote>입도객 통계는 항공·선박 전수 집계이고 한라산 방문객은 지점별 집계라 모수 성격이 달라, 직접 비율 환산 시 근사치로 해석해야 합니다.</blockquote>
+  </div>
+
+  <!-- ========================= 2. 데이터 연결 구조 ========================= -->
+  <div class="card">
+    <div class="section-title"><div class="badge">2</div><h2>데이터 연결 구조</h2></div>
+    <div class="grid2">
+
+      <!-- 2-1. 내/외국인 API -->
+      <div class="subcard">
+        <h4>🧭 제주특별자치도 관광객 현황 (공공데이터 API)</h4>
+        <p class="desc">내국인관광객현황 · 외국인관광객현황 — 구글 Apps Script 중계를 통해 호출합니다. 인증키는 이 화면 어디에도 없습니다.</p>
+        <select id="domesticForeignYear"></select>
+        <div class="codebox" id="domesticCodeBox">RELAY_URL + "?op=domestic&amp;year=2025"</div>
+        <div class="codebox" id="foreignCodeBox">RELAY_URL + "?op=foreign&amp;year=2025"</div>
+        <div class="btnrow">
+          <button class="btn-primary" onclick="loadDomestic()">내국인 데이터 불러오기</button>
+          <button class="btn-outline" onclick="loadForeign()">외국인 데이터 불러오기</button>
+        </div>
+        <div id="domesticStatus" class="status">아직 요청하지 않았습니다.</div>
+        <div id="foreignStatus" class="status" style="margin-top:6px;">아직 요청하지 않았습니다.</div>
+      </div>
+
+      <!-- 2-2. 목적별 API -->
+      <div class="subcard">
+        <h4>🧳 목적별 관광객 현황 (제주데이터허브 API)</h4>
+        <p class="desc">방문목적별 입도객 현황 — 구글 Apps Script 중계를 통해 호출합니다. 인증키는 이 화면 어디에도 없습니다.</p>
+        <input type="text" id="purposeStart" placeholder="시작월 (YYYYMM)" value="201901">
+        <input type="text" id="purposeEnd" placeholder="종료월 (YYYYMM)" value="202512">
+        <div class="codebox" id="purposeCodeBox">RELAY_URL + "?op=purpose&amp;startDate=201901&amp;endDate=202512"</div>
+        <div class="btnrow">
+          <button class="btn-primary" onclick="loadPurpose()">목적별 데이터 불러오기</button>
+        </div>
+        <div id="purposeStatus" class="status">아직 요청하지 않았습니다.</div>
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-top:18px;">
+      <!-- 2-3. 한라산 연도별 업로드 -->
+      <div class="subcard">
+        <h4>🚩 한라산 방문객 데이터 (엑셀 업로드, 연도별·내/외국인)</h4>
+        <p class="desc">시도/행정시/관광지/내외국인 구분 + 연도별(2010년, 2011년...) 열로 구성된 엑셀(xlsx/csv)을 업로드하면, "관광지"에 한라산이 포함된 행만 자동으로 찾아 연도별 내/외국인 합계를 계산합니다.</p>
+        <div class="upload-box">
+          <input type="file" id="annualFileInput" accept=".xlsx,.xls,.csv" onchange="handleAnnualFile(event)">
+        </div>
+        <select id="annualYearSelect" style="margin-top:10px;" onchange="renderAnnualYear()"></select>
+        <div id="annualStatus" class="status" style="margin-top:6px;">파일을 업로드해 주세요.</div>
+        <div class="table-wrap" id="annualTableWrap"></div>
+      </div>
+
+      <!-- 2-4. 코스별·월별 업로드 -->
+      <div class="subcard">
+        <h4>🥾 한라산 코스별·월별 탐방객 현황 (엑셀 업로드, 연도별 탭 구분)</h4>
+        <p class="desc">"2026년 한라산국립공원 탐방객 현황"처럼 연도별 시트(탭)로 구분된 파일을 업로드하면, 시트마다 월별×코스별(어리목/영실/성판악/관음사/돈내코) 데이터를 자동으로 인식합니다.</p>
+        <div class="upload-box">
+          <input type="file" id="courseFileInput" accept=".xlsx,.xls,.csv" onchange="handleCourseFile(event)">
+        </div>
+        <select id="courseYearSelect" style="margin-top:10px;" onchange="renderCourseYear()"></select>
+        <div id="courseStatus" class="status" style="margin-top:6px;">파일을 업로드해 주세요.</div>
+        <div class="table-wrap" id="courseTableWrap"></div>
+        <div id="courseChart" class="chart-area">코스별 월별 스택 차트 자리</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================= 3. 시계열 비교 ========================= -->
+  <div class="card">
+    <div class="section-title"><div class="badge">3</div><h2>시계열 추이 비교</h2></div>
+    <h3>3.1 전체 입도객(목적별 합계) vs 한라산 방문객 추이</h3>
+    <div id="timeseriesChart" class="chart-area">두 데이터가 모두 로드되면 연도별 비교 차트가 표시됩니다.</div>
+    <h3>3.2 계절성 패턴 비교</h3>
+    <div id="seasonTableWrap" class="table-wrap"><p class="small">데이터 로드 후 자동 계산됩니다.</p></div>
+    <h3>3.3 코스별·월별 세부 분석</h3>
+    <p class="small">코스별·월별 엑셀을 업로드하면 상단 2-4 카드의 차트에서 바로 확인할 수 있습니다.</p>
+  </div>
+
+  <!-- ========================= 4. 목적별 구조 분석 ========================= -->
+  <div class="card">
+    <div class="section-title"><div class="badge">4</div><h2>목적별 구조 분석</h2></div>
+    <h3>4.1 목적별 관광객 비중 추이</h3>
+    <div id="purposeStackChart" class="chart-area">목적별 데이터를 불러오면 스택 영역 차트가 표시됩니다.</div>
+    <h3>4.2 '휴양및관람' 목적 관광객 vs 한라산 방문객 상관 분석</h3>
+    <div id="correlationResult" class="status">목적별 데이터와 한라산 엑셀이 모두 있어야 계산됩니다.</div>
+  </div>
+
+  <!-- ========================= 5. 탄력성 ========================= -->
+  <div class="card">
+    <div class="section-title"><div class="badge">5</div><h2>탄력성 및 민감도 분석</h2></div>
+    <h3>5.1 연도별 증감률 비교</h3>
+    <div id="elasticityTableWrap" class="table-wrap"><p class="small">데이터 로드 후 자동 계산됩니다.</p></div>
+  </div>
+
+  <!-- ========================= 6. 내/외국인 분해 ========================= -->
+  <div class="card">
+    <div class="section-title"><div class="badge">6</div><h2>내/외국인 분해 분석</h2></div>
+    <div id="nationalityTableWrap" class="table-wrap"><p class="small">한라산 엑셀(내/외국인 구분 포함)을 업로드하면 자동 계산됩니다.</p></div>
+  </div>
+
+  <!-- ========================= 7. 이상치 탐지 ========================= -->
+  <div class="card">
+    <div class="section-title"><div class="badge">7</div><h2>이상치 및 특이 구간 탐지</h2></div>
+    <div id="outlierTableWrap" class="table-wrap"><p class="small">두 데이터의 증감 방향이 반대인 구간을 자동으로 찾아 표시합니다.</p></div>
+  </div>
+
+  <!-- ========================= 8. 한계 ========================= -->
+  <div class="card">
+    <div class="section-title"><div class="badge">8</div><h2>분석 한계</h2></div>
+    <ul>
+      <li>본 분석은 입도객 통계와 한라산 방문객 통계만으로 수행되어, 탐방예약제·기상·정책 등 외부 요인에 따른 인과관계는 설명하지 않습니다.</li>
+      <li>목적별(레저스포츠 등) 입도객과 한라산 코스별(성판악 등) 이용객을 직접 연결할 식별자가 없어 교차분석이 불가능합니다.</li>
+      <li>입도객은 항공·선박 전수 집계, 한라산 방문객은 지점 게이트 집계로 모수 성격이 달라 직접 비율 계산은 근사치입니다.</li>
+    </ul>
+  </div>
+
+  <!-- ========================= 9. 결론 ========================= -->
+  <div class="card">
+    <div class="section-title"><div class="badge">9</div><h2>결론 및 시사점</h2></div>
+    <textarea placeholder="핵심 발견과 후속 분석 제언을 작성하세요."></textarea>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   0. 공통 유틸
+   ============================================================ */
+function showRelayWarning(){
+  if(!RELAY_URL){
+    document.getElementById('relayWarnBanner').innerHTML =
+      '<div class="warn-banner">⚠ 구글 중계 주소를 RELAY_URL에 넣어 주세요.</div>';
+    return true;
+  }
+  document.getElementById('relayWarnBanner').innerHTML = '';
+  return false;
+}
+showRelayWarning();
+
+function callRelay(op, paramsObj, onDone){
+  if(showRelayWarning()){
+    onDone({ ok:false, resultCode:'ERR_NO_RELAY', resultMsg:'구글 중계 주소를 RELAY_URL에 넣어 주세요.' });
+    return;
+  }
+  var qs = Object.keys(paramsObj).map(function(k){
+    return encodeURIComponent(k) + '=' + encodeURIComponent(paramsObj[k]);
+  }).join('&');
+  var url = RELAY_URL + '?op=' + op + (qs ? ('&' + qs) : '');
+
+  fetch(url).then(function(res){
+    if(!res.ok){
+      return res.text().then(function(txt){
+        throw { httpError:true, status: res.status, body: txt };
+      });
+    }
+    return res.json();
+  }).then(function(json){
+    onDone(json);
+  }).catch(function(err){
+    if(err && err.httpError){
+      onDone({ ok:false, resultCode:'ERR_HTTP_' + err.status, resultMsg:'중계 서버 응답 오류 (' + err.status + ')' });
+    } else {
+      onDone({ ok:false, resultCode:'ERR_FETCH', resultMsg:'요청 실패: ' + (err && err.message ? err.message : '알 수 없는 오류') });
+    }
+  });
+}
+
+function setStatus(elId, ok, msg){
+  var el = document.getElementById(elId);
+  el.className = 'status ' + (ok === true ? 'ok' : (ok === false ? 'err' : ''));
+  el.textContent = msg;
+}
+
+/* ============================================================
+   1. 연도 선택 박스 초기화 (2013~2026)
+   ============================================================ */
+(function initYearSelect(){
+  var sel = document.getElementById('domesticForeignYear');
+  var years = [];
+  for(var y = 2026; y >= 2013; y--) years.push(y);
+  sel.innerHTML = years.map(function(y){ return '<option value="'+y+'">'+y+'년</option>'; }).join('');
+  sel.value = '2025';
+  sel.addEventListener('change', updateApiCodeBoxes);
+  updateApiCodeBoxes();
+})();
+
+function updateApiCodeBoxes(){
+  var year = document.getElementById('domesticForeignYear').value;
+  document.getElementById('domesticCodeBox').textContent = 'RELAY_URL + "?op=domestic&year=' + year + '"';
+  document.getElementById('foreignCodeBox').textContent = 'RELAY_URL + "?op=foreign&year=' + year + '"';
+}
+
+document.getElementById('purposeStart').addEventListener('input', updatePurposeCodeBox);
+document.getElementById('purposeEnd').addEventListener('input', updatePurposeCodeBox);
+function updatePurposeCodeBox(){
+  var s = document.getElementById('purposeStart').value;
+  var e = document.getElementById('purposeEnd').value;
+  document.getElementById('purposeCodeBox').textContent = 'RELAY_URL + "?op=purpose&startDate=' + s + '&endDate=' + e + '"';
+}
+
+/* ============================================================
+   2. API 호출 - 내국인 / 외국인 / 목적별
+   ============================================================ */
+var STATE = {
+  domestic: null,   // { year, items:[...] }
+  foreign: null,
+  purpose: null,    // { items:[...] }
+  annual: null,     // { byYear: { year: {domestic, foreign, total} } }
+  course: null      // { byYear: { year: { months:[...], byCourse:{...} } } }
+};
+
+function loadDomestic(){
+  var year = document.getElementById('domesticForeignYear').value;
+  setStatus('domesticStatus', null, '불러오는 중...');
+  callRelay('domestic', { year: year }, function(res){
+    if(res.ok){
+      STATE.domestic = { year: year, items: res.items };
+      setStatus('domesticStatus', true, '내국인 데이터 로드 성공 · ' + res.items.length + '건');
+      recomputeAll();
+    } else {
+      setStatus('domesticStatus', false, '오류 코드: ' + res.resultCode + ' / 메시지: ' + res.resultMsg);
+    }
+  });
+}
+
+function loadForeign(){
+  var year = document.getElementById('domesticForeignYear').value;
+  setStatus('foreignStatus', null, '불러오는 중...');
+  callRelay('foreign', { year: year }, function(res){
+    if(res.ok){
+      STATE.foreign = { year: year, items: res.items };
+      setStatus('foreignStatus', true, '외국인 데이터 로드 성공 · ' + res.items.length + '건');
+      recomputeAll();
+    } else {
+      setStatus('foreignStatus', false, '오류 코드: ' + res.resultCode + ' / 메시지: ' + res.resultMsg);
+    }
+  });
+}
+
+function loadPurpose(){
+  var s = document.getElementById('purposeStart').value;
+  var e = document.getElementById('purposeEnd').value;
+  setStatus('purposeStatus', null, '불러오는 중...');
+  callRelay('purpose', { startDate: s, endDate: e }, function(res){
+    if(res.ok){
+      STATE.purpose = { items: res.items };
+      setStatus('purposeStatus', true, '목적별 데이터 로드 성공 · ' + res.items.length + '건 (총 ' + res.totalCount + '건)');
+      renderPurposeChart();
+      recomputeAll();
+    } else {
+      setStatus('purposeStatus', false, '오류 코드: ' + res.resultCode + ' / 메시지: ' + res.resultMsg);
+    }
+  });
+}
+
+/* ============================================================
+   3. 파일 읽기 공통 (CSV는 UTF-8 텍스트로, xlsx는 바이너리로)
+   ============================================================ */
+function readFileSmart(file, cb){
+  var isCsv = /\.csv$/i.test(file.name);
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      var wb;
+      if(isCsv){
+        wb = XLSX.read(e.target.result, { type:'string', raw:true });
+      } else {
+        wb = XLSX.read(e.target.result, { type:'array', raw:true });
+      }
+      cb(null, wb);
+    }catch(err){
+      cb(err, null);
+    }
+  };
+  reader.onerror = function(){ cb(new Error('파일을 읽는 중 오류가 발생했습니다.'), null); };
+  if(isCsv){
+    reader.readAsText(file, 'UTF-8');
+  } else {
+    reader.readAsArrayBuffer(file);
+  }
+}
+
+function normHeader(s){
+  return String(s || '').replace(/[^\uAC00-\uD7A3a-zA-Z0-9]/g, '');
+}
+function headerContains(normalized, keyword){
+  return normalized.indexOf(keyword) !== -1;
+}
+
+function normalizeYear(val){
+  if(val instanceof Date){
+    var y = val.getFullYear();
+    return (y > 1990 && y < 2100) ? y : null;
+  }
+  var n = Number(val);
+  if(!isNaN(n)){
+    if(n > 1990 && n < 2100) return n;
+    if(n > 20000 && n < 80000){
+      var d = new Date(Math.round((n - 25569) * 86400 * 1000));
+      var yy = d.getUTCFullYear();
+      return (yy > 1990 && yy < 2100) ? yy : null;
+    }
+  }
+  var m = String(val || '').match(/(\d{4})/);
+  if(m){
+    var yr = Number(m[1]);
+    return (yr > 1990 && yr < 2100) ? yr : null;
+  }
+  return null;
+}
+
+/* ============================================================
+   4. 한라산 연도별(wide format) 업로드 파싱
+   ============================================================ */
+function handleAnnualFile(evt){
+  var file = evt.target.files[0];
+  if(!file) return;
+  setStatus('annualStatus', null, '파싱 중...');
+
+  readFileSmart(file, function(err, wb){
+    if(err){
+      setStatus('annualStatus', false, '파싱 실패: ' + err.message);
+      return;
+    }
+    try{
+      var sheet = wb.Sheets[wb.SheetNames[0]];
+      var rows = XLSX.utils.sheet_to_json(sheet, { header:1, raw:true, defval:'' });
+
+      // 헤더 행 탐색 (상위 10행 중 "관광지"와 "외국인" 포함된 행)
+      var headerRowIdx = -1, cols = {};
+      for(var r = 0; r < Math.min(10, rows.length); r++){
+        var row = rows[r];
+        var found = { site:-1, nat:-1, years:{} };
+        for(var c = 0; c < row.length; c++){
+          var nh = normHeader(row[c]);
+          if(headerContains(nh, '관광')) found.site = c;
+          if(headerContains(nh, '외국인') || headerContains(nh, '내국인')) found.nat = c;
+          var ym = String(row[c]).match(/^(\d{4})년?$/);
+          if(ym) found.years[c] = Number(ym[1]);
+        }
+        if(found.site !== -1 && found.nat !== -1 && Object.keys(found.years).length > 0){
+          headerRowIdx = r; cols = found; break;
+        }
+      }
+
+      if(headerRowIdx === -1){
+        setStatus('annualStatus', false, '파싱 실패: "관광지"/"내·외국인" 헤더를 가진 행을 찾지 못했습니다. 파일 구조를 확인해 주세요.');
+        return;
+      }
+
+      var byYear = {}; // { year: { domestic:0, foreign:0 } }
+      var matchedRows = 0;
+      for(var i = headerRowIdx + 1; i < rows.length; i++){
+        var rr = rows[i];
+        if(!rr || rr.length === 0) continue;
+        var siteVal = String(rr[cols.site] || '');
+        if(siteVal.indexOf('한라산') === -1) continue;
+        matchedRows++;
+
+        var natVal = String(rr[cols.nat] || '');
+        var isForeign = natVal.indexOf('외국인') !== -1;
+        var isDomestic = !isForeign && natVal.indexOf('내국인') !== -1;
+        if(!isForeign && !isDomestic) continue;
+
+        Object.keys(cols.years).forEach(function(cIdx){
+          var year = cols.years[cIdx];
+          var val = Number(rr[cIdx]) || 0;
+          if(!byYear[year]) byYear[year] = { domestic:0, foreign:0 };
+          if(isForeign) byYear[year].foreign += val;
+          else byYear[year].domestic += val;
+        });
+      }
+
+      if(matchedRows === 0){
+        setStatus('annualStatus', false, '파싱 실패: "관광지" 열에서 "한라산"이 포함된 행을 찾지 못했습니다.');
+        return;
+      }
+
+      STATE.annual = { byYear: byYear };
+      var years = Object.keys(byYear).map(Number).sort(function(a,b){return a-b;});
+      var sel = document.getElementById('annualYearSelect');
+      sel.innerHTML = years.map(function(y){ return '<option value="'+y+'">'+y+'년</option>'; }).join('');
+      sel.value = years[years.length - 1];
+
+      setStatus('annualStatus', true, '파싱 성공 · 한라산 행 ' + matchedRows + '건 · 총 ' + years.length + '개 연도');
+      renderAnnualYear();
+      recomputeAll();
+    }catch(e){
+      setStatus('annualStatus', false, '파싱 중 예외 발생: ' + e.message);
+    }
+  });
+}
+
+function renderAnnualYear(){
+  if(!STATE.annual) return;
+  var year = document.getElementById('annualYearSelect').value;
+  var d = STATE.annual.byYear[year];
+  if(!d) return;
+  var total = d.domestic + d.foreign;
+  var html = '<table><tr><th>년도</th><th>한라산 내국인</th><th>한라산 외국인</th><th>합계</th></tr>';
+  html += '<tr><td>' + year + '</td><td>' + d.domestic.toLocaleString() + '</td><td>' + d.foreign.toLocaleString() + '</td><td>' + total.toLocaleString() + '</td></tr>';
+  html += '</table>';
+  document.getElementById('annualTableWrap').innerHTML = html;
+}
+
+/* ============================================================
+   5. 한라산 코스별·월별(연도별 시트) 업로드 파싱
+   ============================================================ */
+function handleCourseFile(evt){
+  var file = evt.target.files[0];
+  if(!file) return;
+  setStatus('courseStatus', null, '파싱 중...');
+
+  readFileSmart(file, function(err, wb){
+    if(err){
+      setStatus('courseStatus', false, '파싱 실패: ' + err.message);
+      return;
+    }
+    try{
+      var byYear = {};
+      var courseKeys = ['어리목','영실','성판악','관음사','돈내코'];
+
+      wb.SheetNames.forEach(function(sheetName){
+        var sheet = wb.Sheets[sheetName];
+        var rows = XLSX.utils.sheet_to_json(sheet, { header:1, raw:true, defval:'' });
+
+        var headerRowIdx = -1, courseCols = {}, divCol = -1;
+        for(var r = 0; r < Math.min(10, rows.length); r++){
+          var row = rows[r];
+          var found = {};
+          var dCol = -1;
+          for(var c = 0; c < row.length; c++){
+            var nh = normHeader(row[c]);
+            if(headerContains(nh, '구분')) dCol = c;
+            courseKeys.forEach(function(ck){
+              if(headerContains(nh, ck)) found[ck] = c;
+            });
+          }
+          if(dCol !== -1 && Object.keys(found).length >= 3){
+            headerRowIdx = r; courseCols = found; divCol = dCol; break;
+          }
+        }
+        if(headerRowIdx === -1) return; // 이 시트는 건너뜀
+
+        // 연도 추출: 시트명 우선, 없으면 윗줄 제목에서
+        var year = normalizeYear(sheetName);
+        if(!year){
+          for(var rr = 0; rr < headerRowIdx; rr++){
+            var line = rows[rr].join(' ');
+            var m = line.match(/(\d{4})년/);
+            if(m){ year = Number(m[1]); break; }
+          }
+        }
+        if(!year) return;
+
+        var months = [];
+        var byCourse = {};
+        courseKeys.forEach(function(ck){ byCourse[ck] = []; });
+
+        for(var i = headerRowIdx + 1; i < rows.length; i++){
+          var row2 = rows[i];
+          if(!row2 || row2.length === 0) continue;
+          var divVal = String(row2[divCol] || '');
+          var mm = divVal.match(/(\d{1,2})월/);
+          if(!mm) continue;
+          months.push(Number(mm[1]));
+          courseKeys.forEach(function(ck){
+            var idx = courseCols[ck];
+            var v = (idx !== undefined) ? row2[idx] : 0;
+            if(v === '-' || v === '' || v === undefined) v = 0;
+            byCourse[ck].push(Number(v) || 0);
+          });
+        }
+
+        if(months.length > 0){
+          byYear[year] = { months: months, byCourse: byCourse };
+        }
+      });
+
+      var years = Object.keys(byYear).map(Number).sort(function(a,b){return a-b;});
+      if(years.length === 0){
+        setStatus('courseStatus', false, '파싱 실패: "구분" 헤더와 월별 행(1월~12월)을 가진 시트를 찾지 못했습니다. 시트 구조를 확인해 주세요.');
+        return;
+      }
+
+      STATE.course = { byYear: byYear };
+      var sel = document.getElementById('courseYearSelect');
+      sel.innerHTML = years.map(function(y){ return '<option value="'+y+'">'+y+'년</option>'; }).join('');
+      sel.value = years[years.length - 1];
+
+      setStatus('courseStatus', true, '파싱 성공 · 총 ' + years.length + '개 연도');
+      renderCourseYear();
+    }catch(e){
+      setStatus('courseStatus', false, '파싱 중 예외 발생: ' + e.message);
+    }
+  });
+}
+
+function renderCourseYear(){
+  if(!STATE.course) return;
+  var year = document.getElementById('courseYearSelect').value;
+  var d = STATE.course.byYear[year];
+  if(!d) return;
+
+  var courseKeys = Object.keys(d.byCourse);
+  var html = '<table><tr><th>월</th>' + courseKeys.map(function(k){return '<th>'+k+'</th>';}).join('') + '</tr>';
+  d.months.forEach(function(m, idx){
+    html += '<tr><td>' + m + '월</td>' + courseKeys.map(function(k){
+      return '<td>' + (d.byCourse[k][idx] || 0).toLocaleString() + '</td>';
+    }).join('') + '</tr>';
+  });
+  html += '</table>';
+  document.getElementById('courseTableWrap').innerHTML = html;
+
+  var traces = courseKeys.map(function(k){
+    return { x: d.months.map(function(m){return m+'월';}), y: d.byCourse[k], name: k, type:'bar' };
+  });
+  Plotly.newPlot('courseChart', traces, {
+    barmode:'stack', margin:{t:20,l:40,r:10,b:40}, height:300,
+    legend:{orientation:'h'}
+  }, {displayModeBar:false});
+}
+
+/* ============================================================
+   6. 목적별 스택 차트 (섹션 4.1)
+   ============================================================ */
+function renderPurposeChart(){
+  if(!STATE.purpose) return;
+  var items = STATE.purpose.items;
+  var byMonth = {};
+  var purposesSet = {};
+  items.forEach(function(it){
+    var ym = it.dtYearMonth, p = it.visitPurpose, v = Number(it.visitorCnt) || 0;
+    if(!byMonth[ym]) byMonth[ym] = {};
+    byMonth[ym][p] = (byMonth[ym][p] || 0) + v;
+    purposesSet[p] = true;
+  });
+  var months = Object.keys(byMonth).sort();
+  var purposes = Object.keys(purposesSet);
+
+  var traces = purposes.map(function(p){
+    return {
+      x: months,
+      y: months.map(function(m){ return byMonth[m][p] || 0; }),
+      name: p, stackgroup: 'one', type: 'scatter', mode:'none'
+    };
+  });
+  Plotly.newPlot('purposeStackChart', traces, {
+    margin:{t:20,l:50,r:10,b:60}, height:320, legend:{orientation:'h'}
+  }, {displayModeBar:false});
+}
+
+/* ============================================================
+   7. 섹션 3,4.2,5,6,7 종합 재계산
+   ============================================================ */
+function purposeYearlyTotals(){
+  // 목적별 API(월별) -> 연도별 합계로 집계
+  if(!STATE.purpose) return null;
+  var byYear = {};
+  var byYearRest = {}; // 휴양및관람만
+  STATE.purpose.items.forEach(function(it){
+    var ym = String(it.dtYearMonth);
+    var year = ym.substring(0,4);
+    var v = Number(it.visitorCnt) || 0;
+    byYear[year] = (byYear[year] || 0) + v;
+    if(it.visitPurpose === '휴양및관람'){
+      byYearRest[year] = (byYearRest[year] || 0) + v;
+    }
+  });
+  return { total: byYear, rest: byYearRest };
+}
+
+function hallasanYearlyTotals(){
+  if(!STATE.annual) return null;
+  var out = {};
+  Object.keys(STATE.annual.byYear).forEach(function(y){
+    var d = STATE.annual.byYear[y];
+    out[y] = d.domestic + d.foreign;
+  });
+  return out;
+}
+
+function pearson(xs, ys){
+  var n = xs.length;
+  if(n < 2) return null;
+  var mx = xs.reduce(function(a,b){return a+b;},0)/n;
+  var my = ys.reduce(function(a,b){return a+b;},0)/n;
+  var num = 0, dx2 = 0, dy2 = 0;
+  for(var i=0;i<n;i++){
+    var dx = xs[i]-mx, dy = ys[i]-my;
+    num += dx*dy; dx2 += dx*dx; dy2 += dy*dy;
+  }
+  var denom = Math.sqrt(dx2*dy2);
+  return denom === 0 ? null : num/denom;
+}
+
+function recomputeAll(){
+  var purposeTotals = purposeYearlyTotals();
+  var hallasanTotals = hallasanYearlyTotals();
+
+  // ---- 3.1 시계열 차트 ----
+  if(purposeTotals && hallasanTotals){
+    var years = Object.keys(hallasanTotals).filter(function(y){ return purposeTotals.total[y] !== undefined; }).sort();
+    if(years.length > 0){
+      var trace1 = { x: years, y: years.map(function(y){return purposeTotals.total[y];}), name:'목적별 입도객 합계(연도)', type:'scatter', yaxis:'y1' };
+      var trace2 = { x: years, y: years.map(function(y){return hallasanTotals[y];}), name:'한라산 방문객', type:'scatter', yaxis:'y2' };
+      Plotly.newPlot('timeseriesChart', [trace1, trace2], {
+        margin:{t:20,l:60,r:60,b:40}, height:320,
+        yaxis:{title:'입도객'}, yaxis2:{title:'한라산', overlaying:'y', side:'right'},
+        legend:{orientation:'h'}
+      }, {displayModeBar:false});
+
+      // 3.2 계절성(연도 단위 비교이므로 간단 표)
+      var sHtml = '<table><tr><th>연도</th><th>입도객 합계</th><th>한라산 방문객</th><th>한라산 비중(%)</th></tr>';
+      years.forEach(function(y){
+        var ratio = (hallasanTotals[y] / purposeTotals.total[y] * 100).toFixed(2);
+        sHtml += '<tr><td>'+y+'</td><td>'+purposeTotals.total[y].toLocaleString()+'</td><td>'+hallasanTotals[y].toLocaleString()+'</td><td>'+ratio+'%</td></tr>';
+      });
+      sHtml += '</table>';
+      document.getElementById('seasonTableWrap').innerHTML = sHtml;
+
+      // ---- 5. 탄력성 ----
+      var eHtml = '<table><tr><th>연도</th><th>입도객 증감률</th><th>한라산 증감률</th><th>격차(%p)</th></tr>';
+      for(var i=1;i<years.length;i++){
+        var y0=years[i-1], y1=years[i];
+        var r1 = ((purposeTotals.total[y1]-purposeTotals.total[y0])/purposeTotals.total[y0]*100);
+        var r2 = ((hallasanTotals[y1]-hallasanTotals[y0])/hallasanTotals[y0]*100);
+        eHtml += '<tr><td>'+y0+' → '+y1+'</td><td>'+r1.toFixed(1)+'%</td><td>'+r2.toFixed(1)+'%</td><td>'+(r2-r1).toFixed(1)+'</td></tr>';
+      }
+      eHtml += '</table>';
+      document.getElementById('elasticityTableWrap').innerHTML = eHtml;
+
+      // ---- 7. 이상치 (방향 반대 구간) ----
+      var oHtml = '<table><tr><th>구간</th><th>입도객 변화</th><th>한라산 변화</th><th>비고</th></tr>';
+      var found = false;
+      for(var j=1;j<years.length;j++){
+        var ya=years[j-1], yb=years[j];
+        var d1 = purposeTotals.total[yb]-purposeTotals.total[ya];
+        var d2 = hallasanTotals[yb]-hallasanTotals[ya];
+        if((d1>0 && d2<0) || (d1<0 && d2>0)){
+          found = true;
+          oHtml += '<tr><td>'+ya+' → '+yb+'</td><td>'+(d1>0?'+':'')+d1.toLocaleString()+'</td><td>'+(d2>0?'+':'')+d2.toLocaleString()+'</td><td>방향 반대 (원인은 데이터만으로 특정 불가)</td></tr>';
+        }
+      }
+      if(!found) oHtml += '<tr><td colspan="4">방향이 반대인 구간이 발견되지 않았습니다.</td></tr>';
+      oHtml += '</table>';
+      document.getElementById('outlierTableWrap').innerHTML = oHtml;
+    }
+  }
+
+  // ---- 4.2 상관계수 ----
+  if(purposeTotals && hallasanTotals){
+    var commonYears = Object.keys(hallasanTotals).filter(function(y){ return purposeTotals.rest[y] !== undefined; }).sort();
+    if(commonYears.length >= 2){
+      var xs = commonYears.map(function(y){return purposeTotals.rest[y];});
+      var ys = commonYears.map(function(y){return hallasanTotals[y];});
+      var r = pearson(xs, ys);
+      setStatus('correlationResult', r !== null, '상관계수 r = ' + (r !== null ? r.toFixed(3) : '계산 불가') + ' (공통 연도 ' + commonYears.length + '개 기준)');
+    } else {
+      setStatus('correlationResult', null, '공통 연도가 2개 미만이라 상관계수를 계산할 수 없습니다.');
+    }
+  }
+
+  // ---- 6. 내/외국인 분해 ----
+  if(STATE.annual){
+    var nHtml = '<table><tr><th>연도</th><th>한라산 내국인</th><th>한라산 외국인</th><th>외국인 비중(%)</th></tr>';
+    Object.keys(STATE.annual.byYear).sort().forEach(function(y){
+      var d = STATE.annual.byYear[y];
+      var total = d.domestic + d.foreign;
+      var ratio = total > 0 ? (d.foreign/total*100).toFixed(2) : '0.00';
+      nHtml += '<tr><td>'+y+'</td><td>'+d.domestic.toLocaleString()+'</td><td>'+d.foreign.toLocaleString()+'</td><td>'+ratio+'%</td></tr>';
+    });
+    nHtml += '</table>';
+    nHtml += '<p class="small">※ 목적별 API에는 내/외국인 구분이 없어 입도객 쪽 내/외국인 비교는 별도 API 연동이 필요합니다.</p>';
+    document.getElementById('nationalityTableWrap').innerHTML = nHtml;
+  }
+}
+</script>
+</body>
+</html>
